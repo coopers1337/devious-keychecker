@@ -385,16 +385,63 @@
         }
 
         .error-message {
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.9) !important;
             text-align: center;
             font-size: 14px;
         }
 
         .typing-indicator {
-            color: rgba(180, 180, 180, 0.7);
+            color: rgba(180, 180, 180, 0.7) !important;
             font-size: 12px;
             margin-top: 8px;
             min-height: 16px;
+        }
+
+        /* Auto-check toggle */
+        .toggle-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(30, 30, 30, 0.8);
+            border: 1px solid rgba(60, 60, 60, 0.6);
+            border-radius: 8px;
+        }
+
+        .form-check-input:checked {
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+        }
+
+        .form-check-label {
+            color: white !important;
+            font-size: 14px;
+        }
+
+        .interval-controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .interval-input {
+            width: 80px;
+            background: rgba(40, 40, 40, 0.8) !important;
+            border: 1px solid rgba(60, 60, 60, 0.8) !important;
+            color: white !important;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .interval-input:focus {
+            background: rgba(50, 50, 50, 0.9) !important;
+            border-color: #0d6efd !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+            color: white !important;
+        }
+
+        .interval-label {
+            color: rgba(180, 180, 180, 0.8) !important;
+            font-size: 12px;
         }
 
         .floating-icons {
@@ -430,17 +477,27 @@
     <!-- Animated background -->
     <div class="particles" id="particles"></div>
     
-    <!-- Floating icons -->
-    <div class="floating-icons" style="top: 15%;">🔑</div>
-    <div class="floating-icons" style="top: 35%; animation-delay: -8s;">✨</div>
-    <div class="floating-icons" style="top: 55%; animation-delay: -16s;">🚀</div>
-    <div class="floating-icons" style="top: 75%; animation-delay: -24s;">💎</div>
+
 
     <div class="main-container">
         <div class="main-card">
             <div class="text-center mb-4">
-                <h1 class="title">API Key Checker</h1>
+                <h1 class="title">Key Checker</h1>
                 <h4 class="subtitle">Real-time verification with secure display</h4>
+            </div>
+
+            <div class="toggle-container">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="autoCheckToggle">
+                    <label class="form-check-label" for="autoCheckToggle">
+                        Auto-check every few seconds
+                    </label>
+                </div>
+                <div class="interval-controls">
+                    <span class="interval-label">Check every:</span>
+                    <input type="number" class="form-control interval-input" id="intervalInput" value="3" min="1" max="60">
+                    <span class="interval-label">seconds</span>
+                </div>
             </div>
 
             <div class="input-container">
@@ -473,6 +530,7 @@
     <script>
         // Global variables
         let checkTimeout;
+        let autoCheckInterval;
         let isInputBlurred = false;
         let currentKeyData = null;
         let isChecking = false;
@@ -484,6 +542,8 @@
         const realtimeInfo = document.getElementById('realtimeInfo');
         const infoCard = document.getElementById('infoCard');
         const toggleInputBtn = document.getElementById('toggleInputBtn');
+        const autoCheckToggle = document.getElementById('autoCheckToggle');
+        const intervalInput = document.getElementById('intervalInput');
 
         // Create floating particles
         function createParticles() {
@@ -505,6 +565,51 @@
 
         // Initialize particles
         createParticles();
+
+        // Auto-check toggle functionality
+        autoCheckToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                startAutoCheck();
+            } else {
+                stopAutoCheck();
+            }
+        });
+
+        // Interval change
+        intervalInput.addEventListener('input', (e) => {
+            if (autoCheckToggle.checked) {
+                stopAutoCheck();
+                startAutoCheck();
+            }
+        });
+
+        // Start auto-checking
+        function startAutoCheck() {
+            const key = keyInput.value.trim();
+            if (!key) return;
+
+            const interval = parseInt(intervalInput.value) * 1000;
+            
+            autoCheckInterval = setInterval(() => {
+                const currentKey = keyInput.value.trim();
+                if (currentKey && !isChecking) {
+                    checkKeyRealtime(currentKey, true);
+                }
+            }, interval);
+
+            typingIndicator.textContent = `Auto-checking every ${intervalInput.value} seconds...`;
+        }
+
+        // Stop auto-checking
+        function stopAutoCheck() {
+            if (autoCheckInterval) {
+                clearInterval(autoCheckInterval);
+                autoCheckInterval = null;
+            }
+            if (typingIndicator.textContent.includes('Auto-checking')) {
+                typingIndicator.textContent = '';
+            }
+        }
 
         // Toggle input visibility
         function toggleInputVisibility() {
@@ -532,25 +637,32 @@
             
             if (!key) {
                 resetStatus();
+                stopAutoCheck();
+                autoCheckToggle.checked = false;
                 return;
             }
 
-            // Show typing indicator
-            typingIndicator.textContent = 'Typing...';
-            statusIndicator.className = 'status-indicator idle';
+            // Show typing indicator only if not auto-checking
+            if (!autoCheckToggle.checked) {
+                typingIndicator.textContent = 'Typing...';
+                statusIndicator.className = 'status-indicator idle';
 
-            // Set timeout for real-time checking (500ms delay)
-            checkTimeout = setTimeout(() => {
-                checkKeyRealtime(key);
-            }, 500);
+                // Set timeout for real-time checking (500ms delay)
+                checkTimeout = setTimeout(() => {
+                    checkKeyRealtime(key);
+                }, 500);
+            }
         });
 
         // Real-time key checker
-        async function checkKeyRealtime(key) {
+        async function checkKeyRealtime(key, isAutoCheck = false) {
             if (isChecking) return;
             
             isChecking = true;
-            typingIndicator.textContent = 'Checking key...';
+            
+            if (!isAutoCheck) {
+                typingIndicator.textContent = 'Checking key...';
+            }
             statusIndicator.className = 'status-indicator checking';
 
             try {
@@ -560,24 +672,32 @@
                 if (response.ok && data.api_key) {
                     showSuccessInfo(data);
                     statusIndicator.className = 'status-indicator valid';
-                    typingIndicator.textContent = 'Valid API key found';
+                    if (!isAutoCheck && !autoCheckToggle.checked) {
+                        typingIndicator.textContent = 'Valid API key found';
+                    }
                 } else {
                     showErrorInfo(data.detail || 'Key not found');
                     statusIndicator.className = 'status-indicator invalid';
-                    typingIndicator.textContent = 'Invalid or not found';
+                    if (!isAutoCheck && !autoCheckToggle.checked) {
+                        typingIndicator.textContent = 'Invalid or not found';
+                    }
                 }
             } catch (error) {
                 showErrorInfo('Network error occurred');
                 statusIndicator.className = 'status-indicator invalid';
-                typingIndicator.textContent = 'Connection error';
+                if (!isAutoCheck && !autoCheckToggle.checked) {
+                    typingIndicator.textContent = 'Connection error';
+                }
             } finally {
                 isChecking = false;
-                // Clear typing indicator after 3 seconds
-                setTimeout(() => {
-                    if (typingIndicator.textContent !== 'Typing...') {
-                        typingIndicator.textContent = '';
-                    }
-                }, 3000);
+                // Clear typing indicator after 3 seconds (only if not auto-checking)
+                if (!autoCheckToggle.checked) {
+                    setTimeout(() => {
+                        if (typingIndicator.textContent !== 'Typing...' && !typingIndicator.textContent.includes('Auto-checking')) {
+                            typingIndicator.textContent = '';
+                        }
+                    }, 3000);
+                }
             }
         }
 
@@ -666,7 +786,9 @@
         // Reset status
         function resetStatus() {
             statusIndicator.className = 'status-indicator idle';
-            typingIndicator.textContent = '';
+            if (!autoCheckToggle.checked) {
+                typingIndicator.textContent = '';
+            }
             realtimeInfo.classList.remove('show');
             currentKeyData = null;
         }
