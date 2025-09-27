@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Key Checker</title>
+    <title>Key Checker</title>
     <style>
         * {
             margin: 0;
@@ -296,10 +296,43 @@
             font-weight: 500;
         }
 
+        .toggle-key-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-left: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .toggle-key-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .key-blur {
+            font-family: monospace;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .key-reveal {
+            font-family: monospace;
+            color: #4ade80;
+            font-weight: 600;
+        }
+
         .info-value {
             color: white;
             font-weight: 600;
             text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
         }
 
         .progress-bar {
@@ -475,7 +508,11 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <span class="info-label">API Key</span>
-                        <span class="info-value">${data.api_key}</span>
+                        <span class="info-value" id="apiKeyValue">
+                            <span class="key-blur" id="keyBlur">${'•'.repeat(data.api_key.length)}</span>
+                            <span class="key-reveal" id="keyReveal" style="display: none;">${data.api_key}</span>
+                            <button class="toggle-key-btn" id="toggleKeyBtn" onclick="toggleKeyVisibility()">👁️</button>
+                        </span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Max Solves</span>
@@ -538,6 +575,25 @@
         keyInput.addEventListener('blur', () => {
             keyInput.parentElement.style.transform = 'scale(1)';
         });
+
+        // Toggle key visibility
+        function toggleKeyVisibility() {
+            const keyBlur = document.getElementById('keyBlur');
+            const keyReveal = document.getElementById('keyReveal');
+            const toggleBtn = document.getElementById('toggleKeyBtn');
+            
+            if (keyBlur.style.display === 'none') {
+                keyBlur.style.display = 'inline';
+                keyReveal.style.display = 'none';
+                toggleBtn.textContent = '👁️';
+                toggleBtn.title = 'Show API key';
+            } else {
+                keyBlur.style.display = 'none';
+                keyReveal.style.display = 'inline';
+                toggleBtn.textContent = '🙈';
+                toggleBtn.title = 'Hide API key';
+            }
+        }
 
         // Recreate particles periodically to keep animation fresh
         setInterval(createParticles, 30000);
